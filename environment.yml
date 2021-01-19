@@ -1,0 +1,12 @@
+name: foolbox-evaluation
+channels:
+  - pytorch
+  - conda-forge
+  - defaults
+dependencies:
+  - python>=3.7
+  - pip
+  - foolbox
+  - matplotlib
+  - pytorch
+  - torchvision
