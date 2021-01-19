@@ -25,23 +25,13 @@ __author__ = "Stefanie Stoppel"
 __copyright__ = "Stefanie Stoppel"
 __license__ = "mit"
 
+from foolbox_evaluation.docs_example import run_sample_attack
+
 _logger = logging.getLogger(__name__)
 
 
-def fib(n):
-    """Fibonacci example function
-
-    Args:
-      n (int): integer
-
-    Returns:
-      int: n-th Fibonacci number
-    """
-    assert n > 0
-    a, b = 1, 1
-    for i in range(n-1):
-        a, b = b, a+b
-    return a
+def evaluate_foolbox():
+    run_sample_attack()
 
 
 def parse_args(args):
@@ -54,16 +44,11 @@ def parse_args(args):
       :obj:`argparse.Namespace`: command line parameters namespace
     """
     parser = argparse.ArgumentParser(
-        description="Just a Fibonacci demonstration")
+        description="Evaluating the foolbox library adversarial attacks on PyTorch models.")
     parser.add_argument(
         "--version",
         action="version",
         version="foolbox-evaluation {ver}".format(ver=__version__))
-    parser.add_argument(
-        dest="n",
-        help="n-th Fibonacci number",
-        type=int,
-        metavar="INT")
     parser.add_argument(
         "-v",
         "--verbose",
@@ -100,9 +85,9 @@ def main(args):
     """
     args = parse_args(args)
     setup_logging(args.loglevel)
-    _logger.debug("Starting crazy calculations...")
-    print("The {}-th Fibonacci number is {}".format(args.n, fib(args.n)))
-    _logger.info("Script ends here")
+    _logger.debug("Starting foolbox evaluation...")
+    evaluate_foolbox()
+    _logger.info("Done evaluating.")
 
 
 def run():
