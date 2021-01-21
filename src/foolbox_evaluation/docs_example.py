@@ -33,6 +33,7 @@ def run_sample_attack():
     # transform bounds of model
     fmodel = fmodel.transform_bounds((0, 1))
     # get sample data from imagenet
+    # todo: should eval be called here for FGSM or other gradient-based attacks??
     model.eval()
     images, labels = fb.utils.samples(fmodel, dataset='imagenet', batchsize=16)
     # print initial model accuracy on the samples

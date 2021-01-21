@@ -1,0 +1,15 @@
+Top labels for image '/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/test_images/3_orig_eps_0.01.jpg':
+	1)  'buckeye, horse chestnut, conker (990)'
+	2)  'barn spider, Araneus cavaticus (73)'
+	3)  'spider web, spider's web (815)'
+	4)  'custard apple (956)'
+	5)  'hip, rose hip, rosehip (989)'
+Predicted class: 990, probability: 0.2273045927286148
+100%|██████████| 1000/1000 [00:06<00:00, 145.65it/s]
+Top labels for image '/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/test_images/3_adv_eps_0.01.jpg':
+	1)  'barn spider, Araneus cavaticus (73)'
+	2)  'black and gold garden spider, Argiope aurantia (72)'
+	3)  'garden spider, Aranea diademata (74)'
+	4)  'spider web, spider's web (815)'
+	5)  'custard apple (956)'
+Predicted class: 73, probability: 0.4481135606765747
