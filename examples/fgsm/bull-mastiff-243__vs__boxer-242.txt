@@ -1,0 +1,16 @@
+100%|██████████| 1000/1000 [00:07<00:00, 136.71it/s]
+Top labels for image '/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/test_images/0_orig_eps_0.01.jpg':
+	1)  'bull mastiff (243)'
+	2)  'boxer (242)'
+	3)  'American Staffordshire terrier, Staffordshire terrier, American pit bull terrier, pit bull terrier (180)'
+	4)  'Staffordshire bullterrier, Staffordshire bull terrier (179)'
+	5)  'bloodhound, sleuthhound (163)'
+Predicted class: 243, probability: 0.8040571808815002
+100%|██████████| 1000/1000 [00:07<00:00, 142.52it/s]
+Top labels for image '/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/test_images/0_adv_eps_0.01.jpg':
+	1)  'boxer (242)'
+	2)  'bull mastiff (243)'
+	3)  'Staffordshire bullterrier, Staffordshire bull terrier (179)'
+	4)  'American Staffordshire terrier, Staffordshire terrier, American pit bull terrier, pit bull terrier (180)'
+	5)  'bloodhound, sleuthhound (163)'
+Predicted class: 242, probability: 0.6547073125839233

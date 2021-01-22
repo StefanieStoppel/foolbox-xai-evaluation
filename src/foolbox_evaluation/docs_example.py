@@ -9,21 +9,19 @@ import torch.nn.functional as F
 
 from functools import partial
 from lime import lime_image
-from PIL import Image
 from skimage.segmentation import mark_boundaries
 from torchvision import transforms
 
-
-def get_imagenet_label_dict():
-    with open(
-            "/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/imagenet1000_clsidx_to_labels.txt") as f:
-        idx2label = eval(f.read())
-    return idx2label
-
+from foolbox_evaluation.utils import get_image, get_imagenet_label_dict, get_root, timeit
 
 model = torchvision.models.resnet18(pretrained=True)
 preprocessing = dict(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], axis=-3)
 imagenet_label_dict = get_imagenet_label_dict()
+
+
+@timeit
+def attack_model(attack, fmodel, images, labels, epsilons):
+    return attack(fmodel, images, labels, epsilons=epsilons)
 
 
 def run_sample_attack():
@@ -49,11 +47,11 @@ def run_sample_attack():
     attack = fb.attacks.LinfFastGradientAttack()
     # epsilons = np.linspace(0.0, 0.005, num=3)
     epsilons = [0.01]
-    raw, clipped, is_adv = attack(fmodel, images, labels, epsilons=epsilons)
+    raw, clipped, is_adv = attack_model(attack, fmodel, images, labels, epsilons)
+    # raw, clipped, is_adv = attack(fmodel, images, labels, epsilons=epsilons)
     robust_accuracy = 1 - is_adv.type(torch.FloatTensor).mean(axis=-1)
 
-    print("robust accuracy for perturbations with")
-    display_images = list()
+    print("Predictions and robust accuracies: ")
     for i, (eps, acc) in enumerate(zip(epsilons, robust_accuracy)):
         print(f"!!!! Linf norm ≤ {eps:<6}: {acc.item() * 100:4.1f} %")
         adversarials = [j for j, adv in enumerate(is_adv[i]) if adv == True]
@@ -73,29 +71,19 @@ def run_sample_attack():
             print(" ")
 
         first_adv_idx = random.choice(adversarials)
-        torchvision.utils.save_image(images[first_adv_idx], f"/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/test_images/{first_adv_idx}_orig_eps_{eps}.jpg")
-        torchvision.utils.save_image(clipped[i][first_adv_idx], f"/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/test_images/{first_adv_idx}_adv_eps_{eps}.jpg")
-    #     original = images[first_adv_idx].permute(1, 2, 0).cpu().numpy()
-    #     adv_img_clipped = clipped[0][first_adv_idx].permute(1, 2, 0).cpu().numpy()
-    #     display_images.append((original, adv_img_clipped))
-    #
-    # # display original and adversarial images side by side
-    # f, ax = plt.subplots(len(display_images), 2)
-    # for idx, (orig, adv) in enumerate(display_images):
-    #     ax[idx][0].imshow(orig)
-    #     ax[idx][1].imshow(adv)
-    #
-    # plt.plot(epsilons, robust_accuracy.numpy())
-    # plt.show()
+        torchvision.utils.save_image(images[first_adv_idx],
+                                     os.path.join(get_root(), f"test_images/{first_adv_idx}_orig_eps_{eps}.jpg"))
+        torchvision.utils.save_image(clipped[i][first_adv_idx],
+                                     os.path.join(get_root(), f"test_images/{first_adv_idx}_adv_eps_{eps}.jpg"))
 
 
 def is_classified_correctly(model, images, labels):
     """
     Checks whether the model predicts the "correct", ground-truth labels for the (non-adversarial) input images.
-    :param model:
-    :param images:
-    :param labels:
-    :return:
+    :param model: foolbox model
+    :param images: tensor of non-adversarial images (B, C, W, H)
+    :param labels: tensor of ground truth labels for the images (B, N), where N = number of classes
+    :return: boolean tensor containing True for images that were correctly classified by the model, and False otherwise
     """
     accuracies = list()
     for image, label in zip(images, labels):
@@ -106,7 +94,7 @@ def is_classified_correctly(model, images, labels):
 def explain_with_lime(img_p, foolbox_model, random_seed=42):
     img = get_image(img_p)
     explainer = lime_image.LimeImageExplainer()
-    transf_img = np.array(pill_transf(img))
+    transf_img = np.array(get_pil_transform()(img))
     classifier_fn = partial(foolbox_predict, foolbox_model)
     explanation = explainer.explain_instance(transf_img,
                                              classifier_fn,  # classification function
@@ -126,34 +114,18 @@ def explain_with_lime(img_p, foolbox_model, random_seed=42):
     for idx, label_idx in enumerate(explanation.top_labels, 1):
         print(f"\t{idx})  '{imagenet_label_dict[label_idx]} ({label_idx})'")
 
-    # img_tensor = transforms.ToTensor()(img).unsqueeze_(0)
-    probs = foolbox_predict(foolbox_model, [transf_img])
-
-    # probs = batch_predict([img])
+    probs = classifier_fn([transf_img])
     print(f"Predicted class: {probs.argmax()}, probability: {probs.max()}")
 
     img_boundary1 = mark_boundaries(temp / 255.0, mask)
     return img_boundary1
 
 
-def foolbox_predict(fmodel, images):
+def foolbox_predict(fmodel: fb.PyTorchModel, images: np.array):
     batch = torch.stack(tuple(transforms.ToTensor()(i) for i in images), dim=0)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     images = batch.to(device)
     logits = fmodel(images)
-    probs = F.softmax(logits, dim=1)
-    return probs.detach().cpu().numpy()
-
-
-def batch_predict(images):
-    model.eval()
-    batch = torch.stack(tuple(preprocess_transform(i) for i in images), dim=0)
-
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
-    batch = batch.to(device)
-
-    logits = model(batch)
     probs = F.softmax(logits, dim=1)
     return probs.detach().cpu().numpy()
 
@@ -167,33 +139,13 @@ def get_pil_transform():
     return transf
 
 
-def get_preprocess_transform():
-    normalize = transforms.Normalize(mean=preprocessing["mean"],
-                                     std=preprocessing["std"])
-    transf = transforms.Compose([
-        transforms.ToTensor(),
-        normalize
-    ])
-
-    return transf
-
-
-def get_image(path):
-    with open(os.path.abspath(path), 'rb') as f:
-        with Image.open(f) as img:
-            return img.convert('RGB')
-
-
-pill_transf = get_pil_transform()
-preprocess_transform = get_preprocess_transform()
-
 if __name__ == "__main__":
     # one pixel attack
     # orig_p = "/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/test_images/puppy_224-224_original.jpg"
     # adv_p = "/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/test_images/puppy_224-224_adv.jpg"
     # other attack
-    orig_p = "/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/test_images/3_orig_eps_0.01.jpg"
-    adv_p = "/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/test_images/3_adv_eps_0.01.jpg"
+    orig_p = "/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/test_images/0_bull-mastiff_orig_eps_0.01.jpg"
+    adv_p = "/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/test_images/0_bull-mastiff_adv_eps_0.01.jpg"
 
     model.eval()
 
