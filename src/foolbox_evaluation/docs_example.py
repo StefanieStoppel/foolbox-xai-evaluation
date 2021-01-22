@@ -52,6 +52,7 @@ def run_sample_attack():
     robust_accuracy = 1 - is_adv.type(torch.FloatTensor).mean(axis=-1)
 
     print("Predictions and robust accuracies: ")
+    predicted_labels = list()
     for i, (eps, acc) in enumerate(zip(epsilons, robust_accuracy)):
         print(f"!!!! Linf norm ≤ {eps:<6}: {acc.item() * 100:4.1f} %")
         adversarials = [j for j, adv in enumerate(is_adv[i]) if adv == True]
@@ -69,12 +70,14 @@ def run_sample_attack():
             print(f"Adversarial prediction: {adv_imagenet_idx}, "
                   f"{imagenet_label_dict[adv_imagenet_idx]}")
             print(" ")
-
-        first_adv_idx = random.choice(adversarials)
-        torchvision.utils.save_image(images[first_adv_idx],
-                                     os.path.join(get_root(), f"test_images/{first_adv_idx}_orig_eps_{eps}.jpg"))
-        torchvision.utils.save_image(clipped[i][first_adv_idx],
-                                     os.path.join(get_root(), f"test_images/{first_adv_idx}_adv_eps_{eps}.jpg"))
+            predicted_labels.append((original_imagenet_idx, adv_imagenet_idx))
+            torchvision.utils.save_image(images[adv_idx],
+                                         os.path.join(get_root(), f"test_images/0_01/{adv_idx}_orig_eps_{eps}.jpg"))
+            torchvision.utils.save_image(clipped[i][adv_idx],
+                                         os.path.join(get_root(), f"test_images/0_01/{adv_idx}_adv_eps_{eps}.jpg"))
+        with open(os.path.join(get_root(), f"test_images/0_01/labels.txt"), 'w') as f:
+            for (orig_label, adv_label) in predicted_labels:
+                f.write(f"{orig_label},{adv_label}\n")
 
 
 def is_classified_correctly(model, images, labels):
@@ -144,23 +147,23 @@ if __name__ == "__main__":
     # orig_p = "/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/test_images/puppy_224-224_original.jpg"
     # adv_p = "/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/test_images/puppy_224-224_adv.jpg"
     # other attack
-    orig_p = "/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/test_images/0_bull-mastiff_orig_eps_0.01.jpg"
-    adv_p = "/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/test_images/0_bull-mastiff_adv_eps_0.01.jpg"
+    # orig_p = "/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/test_images/0_bull-mastiff_orig_eps_0.01.jpg"
+    # adv_p = "/home/steffi/dev/master_thesis/adversarial_attacks/foolbox-evaluation/test_images/0_bull-mastiff_adv_eps_0.01.jpg"
+    #
+    # model.eval()
+    #
+    # bounds = (0, 1)
+    # fmodel = fb.PyTorchModel(model, bounds=bounds, preprocessing=preprocessing)
+    # # transform bounds of model
+    # fmodel = fmodel.transform_bounds((0, 1))
+    # # get sample data from imagenet
+    #
+    # orig_boundary = explain_with_lime(orig_p, fmodel)
+    # adv_boundary = explain_with_lime(adv_p, fmodel)
+    #
+    # f, ax = plt.subplots(1, 2)
+    # ax[0].imshow(orig_boundary)
+    # ax[1].imshow(adv_boundary)
+    # plt.show()
 
-    model.eval()
-
-    bounds = (0, 1)
-    fmodel = fb.PyTorchModel(model, bounds=bounds, preprocessing=preprocessing)
-    # transform bounds of model
-    fmodel = fmodel.transform_bounds((0, 1))
-    # get sample data from imagenet
-
-    orig_boundary = explain_with_lime(orig_p, fmodel)
-    adv_boundary = explain_with_lime(adv_p, fmodel)
-
-    f, ax = plt.subplots(1, 2)
-    ax[0].imshow(orig_boundary)
-    ax[1].imshow(adv_boundary)
-    plt.show()
-
-    # run_sample_attack()
+    run_sample_attack()
